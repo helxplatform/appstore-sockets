@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
+import axios from 'axios'
+import { appstoreHost } from '../config'
 
 interface AppstoreIdentity {
     remoteUser: string
@@ -15,11 +17,20 @@ declare global {
     }
 }
 
-export default (req: Request, res: Response, next: NextFunction) => {
-    const remoteUser = req.headers["remote_user"]
-    const accessToken = req.headers["authorization"]
+// We need to authenticate appstore identity here rather than through nginx/ambassador
+// because otherwise someone could open a websocket connection directly through ambassador with forged
+// auth headers.
+export default async (req: Request, res: Response, next: NextFunction) => {
+    const authRes = await axios.get(`http://${ appstoreHost }/auth`, {
+        headers: {
+            Cookie: req.headers.cookie
+        }
+    })
+    const remoteUser: string = authRes.headers["Remote_user"]
+    const accessToken: string = authRes.headers["Access_token"]
 
-    if (typeof remoteUser === "string" && typeof accessToken === "string") {
+
+    if (authRes.status === 200 && remoteUser && accessToken) {
         req.appstoreIdentity = {
             remoteUser,
             accessToken
@@ -27,11 +38,6 @@ export default (req: Request, res: Response, next: NextFunction) => {
         next()
     } else {
         res.status(401)
-        res.send(
-            `You shouldn\'t be seeing this message. \
-             There's probably something wrong with the deployment configuration \
-             or a security vulnerabilty.
-            `
-        )
+        res.send(`You aren't authorized to access this route.`)
     }
 }

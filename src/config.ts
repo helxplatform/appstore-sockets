@@ -1,6 +1,8 @@
 const process = require('process')
 
 
+if (!process.env.APPSTORE_HOST) throw new Error("Environment variable APPSTORE_HOST must be set")
+export const appstoreHost: string = process.env.APPSTORE_HOST
 // General event-publishing routes need to include this secret
 // in their header. Only pods authorized by the service should
 // be able to access those endpoints, but this is an extra layer
