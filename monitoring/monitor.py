@@ -132,7 +132,9 @@ def main():
     while True:
         stream = watch.Watch().stream(
             core_v1_api.list_namespaced_pod,
-            NAMESPACE
+            NAMESPACE,
+            resource_version=latest_resource_version,
+            timeout_seconds=5
         )
         try:
             for event in stream:
