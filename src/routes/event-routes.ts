@@ -1,36 +1,7 @@
 import { Router } from 'express'
 import { requirePublishSecret, publisherSecret } from '../config'
 import { authenticationMiddleware } from '../middleware'
-
-enum AppStatus {
-    LAUNCHING = "LAUNCHING",
-    LAUNCHED = "LAUNCHED",
-    FAILED = "FAILED",
-    SUSPENDING = "SUSPENDING",
-    TERMINATED = "TERMINATED"
-}
-
-interface ContainerState {
-    type: "WAITING" | "RUNNING" | "TERMINATED"
-}
-interface ContainerWaitingState extends ContainerState {
-    message?: string
-    reason?: string
-}
-interface ContainerRunningState extends ContainerState {
-    started_at?: number
-}
-interface ContainerTerminatedState extends ContainerState {
-    exit_code: number
-    started_at?: number
-    finished_at?: number
-    message?: string
-    reason?: string
-}
-interface ContainerStatus {
-    container_name: string
-    container_state: ContainerWaitingState | ContainerRunningState | ContainerTerminatedState
-}
+import { AppStatus, ContainerStatus } from '../events/app-status-events'
 
 const router = Router()
 if (requirePublishSecret) {
@@ -39,7 +10,6 @@ if (requirePublishSecret) {
 } else {
     console.log('--- Not requiring signed event uploads ---')
 }
-
 
 router.post('/app/status', (req, res) => {
     const getWsClient = req.getWsClient!
@@ -53,13 +23,7 @@ router.post('/app/status', (req, res) => {
         res.status(400)
         res.send()
     } else {
-        const client = getWsClient(appOwner)
-        if (client) client.send(JSON.stringify({
-            type: 'app_status',
-            app_id: appId,
-            status,
-            containerStates
-        }))
+        getWsClient(appOwner).emitAppStatus(appId, status, containerStates)
 
         res.status(200)
         res.send()

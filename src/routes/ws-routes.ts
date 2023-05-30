@@ -12,6 +12,7 @@ router.ws('/', (ws, req) => {
     const { remoteUser } = appstoreIdentity!
     const addWsClient = req.addWsClient!
     const deleteWsClient = req.deleteWsClient!
+    const getWsClient = req.getWsClient!
 
     addWsClient(remoteUser, ws)
 
@@ -28,13 +29,16 @@ router.ws('/', (ws, req) => {
         }
         console.log(`Handling event ${ eventType } with following parameters: ${ eventData }`)
         switch (eventType) {
+            case "initial_app_statuses":
+                getWsClient(remoteUser).emitInitialAppStatuses()
+                break
             default:
                 console.log(`Unrecognized event ${ eventType }`)
         }
     })
     ws.on('close', (code, reason) => {
         console.log(`Websocket connection closed by client ${ remoteUser }, code: ${ code}, reason: ${ reason }`)
-        deleteWsClient(remoteUser)
+        deleteWsClient(remoteUser, ws)
     })
 })
 

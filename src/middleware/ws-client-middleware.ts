@@ -1,26 +1,42 @@
 import { Request, Response, NextFunction } from 'express'
 import type { WebSocket } from 'ws'
+import { IWebsocketEvents, WebsocketEvents } from '../events'
 
 interface Clients {
-    [remoteUser: string]: WebSocket
+    [remoteUser: string]: IWebsocketEvents
 }
 interface GetClient {
-    (remoteUser: string): WebSocket
+    (remoteUser: string): IWebsocketEvents
 }
 interface AddClient {
     (remoteUser: string, ws: WebSocket): void
 }
 interface DeleteClient {
-    (remoteUser: string): void
+    (remoteUser: string, ws: WebSocket): void
 }
 
 const clients: Clients = {}
-const getClient = (remoteUser: string) => clients[remoteUser]
-const addClient = (remoteUser: string, ws: WebSocket) => {
-    clients[remoteUser] = ws
+/**
+ * Get the event emitter instance. If it doesn't exist yet, create one for the client without any websockets attached.
+ */
+const getClient: GetClient = (remoteUser: string) => {
+    if (!clients[remoteUser]) clients[remoteUser] = new WebsocketEvents()
+    return clients[remoteUser]
 }
-const deleteClient = (remoteUser: string) => {
-    delete clients[remoteUser]
+/**
+ * Attach a websocket connection to a client.
+ */
+const addClient: AddClient = (remoteUser: string, ws: WebSocket) => {
+    if (!clients[remoteUser]) clients[remoteUser] = new WebsocketEvents()
+    clients[remoteUser].addWebsocket(ws)
+}
+/**
+ * Detach a websocket connection from a client.
+ */
+const deleteClient: DeleteClient = (remoteUser: string, ws: WebSocket) => {
+    if (clients[remoteUser]) {
+        clients[remoteUser].removeWebsocket(ws)
+    }
 }
 
 declare global {
