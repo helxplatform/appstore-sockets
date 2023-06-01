@@ -24,7 +24,7 @@ export abstract class Event<T> implements IEvent<T> {
     constructor(type: string, data: T) {
         this.type = type
         this.uid = Event.generateUid()
-        this.timestamp = Math.floor(Date.now() / 1000)
+        this.timestamp = Date.now() / 1000
         this.data = data
     }
     private static generateUid(): string {
