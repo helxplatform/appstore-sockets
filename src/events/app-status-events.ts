@@ -32,21 +32,24 @@ export interface ContainerStatus {
 
 export interface AppStatusData {
     appId: string
+    systemId: string
     status: AppStatus
     containerStates: ContainerStatus[]
 }
 export class AppStatusEvent extends Event<AppStatusData> {
+    static TYPE = "app_status"
     constructor(data: AppStatusData) {
-        super("app_status", data)
+        super(AppStatusEvent.TYPE, data)
     }
 }
 export class InitialAppStatusesEvent extends Event<AppStatusEvent[]> {
+    static TYPE = "initial_app_statuses"
     constructor(data: AppStatusEvent[]) {
-        super("initial_app_statuses", data)
+        super(InitialAppStatusesEvent.TYPE, data)
     }
     serialize() {
         return {
-            type: this.getType(),
+            ...super.serialize(),
             data: this.getData().map((event) => event.serialize())
         }
     }

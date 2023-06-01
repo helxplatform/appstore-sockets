@@ -1,5 +1,6 @@
 import { Router } from  'express'
 import expressWs from 'express-ws'
+import { WsReadyEvent } from '../events/ws-ready-event'
 import { appstoreIdentityMiddleware } from '../middleware'
 
 const router = Router()
@@ -14,7 +15,13 @@ router.ws('/', (ws, req) => {
     const deleteWsClient = req.deleteWsClient!
     const getWsClient = req.getWsClient!
 
+    console.log(`Websocket connection opened by client ${ remoteUser }`)
     addWsClient(remoteUser, ws)
+
+    // Appstore identity middleware is async, which means the websocket server is unable to receive messages
+    // despite being in an open state until the middleware completes and verifies the connection.
+    // Therefore, clients should wait until receiving a _confirmReady before sending messages.
+    ws.send(JSON.stringify(new WsReadyEvent().serialize()))
 
     ws.on('message', (msg: string) => {
         let eventType, eventData
@@ -27,7 +34,7 @@ router.ws('/', (ws, req) => {
             console.error('Could not parse message as JSON: ', msg)
             return
         }
-        console.log(`Handling event ${ eventType } with following parameters: ${ eventData }`)
+        console.log(`Handling event ${ eventType } with following parameters: ${ JSON.stringify(eventData) }`)
         switch (eventType) {
             case "initial_app_statuses":
                 getWsClient(remoteUser).emitInitialAppStatuses()

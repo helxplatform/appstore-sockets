@@ -15,6 +15,7 @@ router.post('/app/status', (req, res) => {
     const getWsClient = req.getWsClient!
 
     const appId = req.body.app_id as string
+    const systemId = req.body.system_id as string
     const appOwner = req.body.app_user as string
     const status = req.body.status as AppStatus
     const containerStates = req.body.container_states as ContainerStatus[]
@@ -23,7 +24,7 @@ router.post('/app/status', (req, res) => {
         res.status(400)
         res.send()
     } else {
-        getWsClient(appOwner).emitAppStatus(appId, status, containerStates)
+        getWsClient(appOwner).emitAppStatus(appId, systemId, status, containerStates)
 
         res.status(200)
         res.send()
