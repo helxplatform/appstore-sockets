@@ -78,7 +78,8 @@ def handle_pod_event(event):
         for container_status in container_statuses
     ] if container_statuses is not None else None
 
-    app_id = pod_labels["tycho-guid"]
+    app_id = pod_labels["app-name"]
+    system_id = pod_labels["tycho-guid"]
     app_owner = pod_labels["username"]
     app_status = None
     if event_type == "DELETED":
@@ -110,6 +111,7 @@ def handle_pod_event(event):
     try:
         session.post(f"http://{ WS_HOST }:5555/hooks/app/status", json={
             "app_id": app_id,
+            "system_id": system_id,
             "app_user": app_owner,
             "status": app_status,
             "container_states": container_states
@@ -133,7 +135,6 @@ def main():
         stream = watch.Watch().stream(
             core_v1_api.list_namespaced_pod,
             NAMESPACE,
-            resource_version=latest_resource_version,
             timeout_seconds=5
         )
         try:
@@ -143,6 +144,7 @@ def main():
         except Exception as e:
             if isinstance(e, KeyboardInterrupt): break
             logger.warning(f"Connection with Kubernetes server closed. Attempting to reconnect in { RECONNECT_TIMEOUT }s...")
+            print(e)
             time.sleep(RECONNECT_TIMEOUT)
 
 if __name__ ==  "__main__":
