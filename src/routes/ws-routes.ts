@@ -39,6 +39,9 @@ router.ws('/', (ws, req) => {
             case "initial_app_statuses":
                 getWsClient(remoteUser).emitInitialAppStatuses()
                 break
+            case "clear_logs":
+                getWsClient(remoteUser).clearLogs()
+                break
             default:
                 console.log(`Unrecognized event ${ eventType }`)
         }

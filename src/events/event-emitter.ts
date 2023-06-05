@@ -5,6 +5,8 @@ import { AppStatusEvent, InitialAppStatusesEvent, AppStatus, ContainerStatus, Ap
 export interface IWebsocketEvents {
     addWebsocket(ws: WebSocket): void
     removeWebsocket(ws: WebSocket): void
+    clearLogs(): void
+
 
     emitInitialAppStatuses(): void
     emitAppStatus(appId: string, systemId: string, status: AppStatus, containerStates: ContainerStatus[]): void
@@ -28,6 +30,10 @@ export class WebsocketEvents implements IWebsocketEvents {
     }
     public removeWebsocket(ws: WebSocket) {
         this.websockets = this.websockets.filter((_ws) => _ws !== ws)
+    }
+
+    public clearLogs() {
+        this.eventLogs = []
     }
 
     public emitInitialAppStatuses() {
