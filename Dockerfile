@@ -1,9 +1,9 @@
-FROM node:XXXX-alpine
+FROM node:18.16-alpine
 
 WORKDIR /usr/src/app
 COPY . /usr/src/app
 
-RUN npm install -g npm@latest
+RUN npm install -g npm@9.8.1
 RUN npm clean-install
 RUN npm run build
 
