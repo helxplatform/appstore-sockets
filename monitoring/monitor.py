@@ -1,4 +1,6 @@
-from kubernetes import client, watch, config
+from kubernetes import client, watch, config, dynamic
+from threading import Thread
+import kubernetes
 import os
 import time
 import requests
@@ -51,7 +53,8 @@ def get_container_state(container_status):
             "finished_at": state.finished_at.astimezone(pytz.UTC).timestamp() if state.finished_at is not None else None
         }
 
-def handle_pod_event(event):
+
+def handle_pod_status_event(event):
     event_type = event["type"]
     instance = event["object"]
 
@@ -64,7 +67,7 @@ def handle_pod_event(event):
     if not is_tycho_app:
         return
     if event_type == "ADDED":
-        logger.info("ADDED event - Skipping...")
+        logger.debug("ADDED event - Skipping...")
         return
 
     # Terminating is not an actual pod phase, see k8s pod phase docs
@@ -121,31 +124,120 @@ def handle_pod_event(event):
         logger.error(f"{ e.__class__.__name__ } - Failed to post event to webhook")
     
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
+def handle_namespaced_event(dyn_client, event):
+    instance = event["object"]
+    event_type = event["type"]
+    event_reason = instance.reason
+    event_message = instance.message
+    obj = instance.involved_object
+
+
+    if event_type == "ADDED":
+        logger.debug("ADDED event - Skipping...")
+        return
+    
+    if event_reason != "FailedCreate" and event_reason != "Failed":
+        logger.debug(f"Unhandled event reason {event_reason} - Skipping...")
+        return
+
+    try:
+        resource_def = dyn_client.resources.get(
+            api_version=obj.api_version,
+            kind=obj.kind
+        )
+        resource = resource_def.get(namespace=obj.namespace, name=obj.name)
+        resource_name = resource.metadata.name
+        resource_labels = resource.metadata.labels
+        resource_status = resource.status.phase
+        # container_statuses = resource.status.container_statuses
+
+        # This is very important here, it allows us to differentiate events related to Tycho apps
+        # from all the other noise in the namespace.
+        is_tycho_app = resource_labels.get("executor", None) == "tycho"
+        if not is_tycho_app:
+            logger.debug("{resource_name} is not a Tycho app, skipping...")
+            return
+        
+        app_id = resource_labels["app-name"]
+        system_id = resource_labels["tycho-guid"]
+        app_owner = resource_labels["username"]
+
+        # print("APP EVENT:", event_type, app_id, system_id, app_owner)
+        try:
+            session.post(f"http://{ WS_HOST }:5555/hooks/app/status", json={
+                "app_id": app_id,
+                "system_id": system_id,
+                "app_user": app_owner,
+                "status": "FAILED",
+                "container_states": []
+            })
+            logger.info("Posted event data to webhook")
+        except Exception as e:
+            logger.error(f"{ e.__class__.__name__ } - Failed to post event to webhook")
+
+
     
 
-def main():
-    if DEV_MODE: config.load_kube_config()
-    else: config.load_incluster_config()
-    core_v1_api = client.CoreV1Api()
+    except kubernetes.dynamic.exceptions.DynamicApiError as e:
+        print("couldnt handle event")
+        print(e.reason, "\n", e.status, "\n", e.summary)
+        ...
 
-    logger.info(f'Monitoring pod events in namespace "{ NAMESPACE }"')
 
+def watch_namespaced_pods(api, dyn_client):
     latest_resource_version = None
     while True:
         stream = watch.Watch().stream(
-            core_v1_api.list_namespaced_pod,
+            api.list_namespaced_pod,
             NAMESPACE,
             timeout_seconds=5
         )
         try:
             for event in stream:
                 latest_resource_version = event["object"].metadata.resource_version
-                handle_pod_event(event)
+                handle_pod_status_event(event)
         except Exception as e:
             if isinstance(e, KeyboardInterrupt): break
             logger.warning(f"Connection with Kubernetes server closed. Attempting to reconnect in { RECONNECT_TIMEOUT }s...")
             print(e)
             time.sleep(RECONNECT_TIMEOUT)
+
+def watch_namespaced_events(api, dyn_client):
+    latest_resource_version = None
+    while True:
+        stream = watch.Watch().stream(
+            api.list_namespaced_event,
+            NAMESPACE,
+            timeout_seconds=5
+        )
+        try:
+            for event in stream:
+                latest_resource_version = event["object"].metadata.resource_version
+                handle_namespaced_event(dyn_client, event)
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt): break
+            logger.warning(f"Connection with Kubernetes server closed. Attempting to reconnect in { RECONNECT_TIMEOUT }s...")
+            print(e)
+            time.sleep(RECONNECT_TIMEOUT)
+
+def main():
+    if DEV_MODE: config.load_kube_config()
+    else: config.load_incluster_config()
+    core_v1_api = client.CoreV1Api()
+    dyn_client = dynamic.DynamicClient(client.api_client.ApiClient())
+
+
+    logger.info(f'Monitoring pod events in namespace "{ NAMESPACE }"')
+
+    pod_thread = Thread(target=watch_namespaced_pods, args=(core_v1_api, dyn_client))
+    event_thread = Thread(target=watch_namespaced_events, args=(core_v1_api, dyn_client))
+
+    # pod_thread.start()
+    event_thread.start()
+
+    # pod_thread.join()
+    event_thread.join()
 
 if __name__ ==  "__main__":
     main()
