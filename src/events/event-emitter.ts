@@ -9,7 +9,7 @@ export interface IWebsocketEvents {
 
 
     emitInitialAppStatuses(): void
-    emitAppStatus(appId: string, systemId: string, status: AppStatus, containerStates: ContainerStatus[]): void
+    emitAppStatus(appStatusData: AppStatusData): void
 }
 
 export class WebsocketEvents implements IWebsocketEvents {
@@ -41,13 +41,10 @@ export class WebsocketEvents implements IWebsocketEvents {
         this.emit(event)
     }
 
-    public emitAppStatus(appId: string, systemId: string, status: AppStatus, containerStates: ContainerStatus[]) {
-        const event = new AppStatusEvent({
-            appId,
-            systemId,
-            status,
-            containerStates
-        })
+    public emitAppStatus(
+        appStatusData: AppStatusData
+    ) {
+        const event = new AppStatusEvent(appStatusData)
         this.emit(event)
     }
 }

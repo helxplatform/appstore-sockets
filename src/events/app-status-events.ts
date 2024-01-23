@@ -33,8 +33,9 @@ export interface ContainerStatus {
 export interface AppStatusData {
     appId: string
     systemId: string
-    status: AppStatus
-    containerStates: ContainerStatus[]
+    status: AppStatus,
+    reason: string | null,
+    containerStates: ContainerStatus[] | null
 }
 export class AppStatusEvent extends Event<AppStatusData> {
     static TYPE = "app_status"

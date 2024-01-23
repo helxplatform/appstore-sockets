@@ -117,9 +117,10 @@ def handle_pod_status_event(event):
             "system_id": system_id,
             "app_user": app_owner,
             "status": app_status,
+            "reason": None,
             "container_states": container_states
         })
-        logger.info("Posted event data to webhook")
+        logger.info("Posted app status event to webhook")
     except Exception as e:
         logger.error(f"{ e.__class__.__name__ } - Failed to post event to webhook")
     
@@ -131,7 +132,6 @@ def handle_namespaced_event(dyn_client, event):
     event_reason = instance.reason
     event_message = instance.message
     obj = instance.involved_object
-
 
     if event_type == "ADDED":
         logger.debug("ADDED event - Skipping...")
@@ -170,9 +170,10 @@ def handle_namespaced_event(dyn_client, event):
                 "system_id": system_id,
                 "app_user": app_owner,
                 "status": "FAILED",
-                "container_states": []
+                "reason": event_message,
+                "container_states": None
             })
-            logger.info("Posted event data to webhook")
+            logger.info("Posted namespaced event to webhook")
         except Exception as e:
             logger.error(f"{ e.__class__.__name__ } - Failed to post event to webhook")
 
@@ -180,9 +181,8 @@ def handle_namespaced_event(dyn_client, event):
     
 
     except kubernetes.dynamic.exceptions.DynamicApiError as e:
-        print("couldnt handle event")
-        print(e.reason, "\n", e.status, "\n", e.summary)
-        ...
+        # The resource is deleted
+        pass
 
 
 def watch_namespaced_pods(api, dyn_client):
