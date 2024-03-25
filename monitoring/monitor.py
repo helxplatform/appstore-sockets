@@ -233,10 +233,10 @@ def main():
     pod_thread = Thread(target=watch_namespaced_pods, args=(core_v1_api, dyn_client))
     event_thread = Thread(target=watch_namespaced_events, args=(core_v1_api, dyn_client))
 
-    # pod_thread.start()
+    pod_thread.start()
     event_thread.start()
 
-    # pod_thread.join()
+    pod_thread.join()
     event_thread.join()
 
 if __name__ ==  "__main__":
