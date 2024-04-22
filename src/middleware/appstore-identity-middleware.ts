@@ -24,10 +24,11 @@ export default async (req: Request, res: Response, next: NextFunction) => {
     let remoteUser: string | undefined
     let accessToken: string | undefined
     try {
-        const authRes = await axios.get(`http://${ appstoreHost }/auth`, {
+        const authRes = await axios.get(`http://${ appstoreHost }/auth/`, {
             headers: {
                 Cookie: req.headers.cookie
-            }
+            },
+            maxRedirects: 0
         })
         remoteUser = authRes.headers["remote_user"]
         accessToken = authRes.headers["access_token"]
