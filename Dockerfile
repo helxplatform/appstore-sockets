@@ -1,9 +1,10 @@
-FROM node:18.16-alpine
+FROM node:18.17-alpine
 
 WORKDIR /usr/src/app
 COPY . /usr/src/app
 
 RUN npm i -g npm@latest
+RUN npm install
 RUN npm ci
 RUN npm run build
 
