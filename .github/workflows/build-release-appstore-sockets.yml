@@ -1,11 +1,5 @@
 name: Build-Push-Release
 on:
-  # workflow_dispatch:
-  #   inputs:
-  #     versionTag:
-  #       description: 'Tag for new release, ie 1.1.2 .. 4.0.0, etc. 🛑 DO not include the ⍘v⍘ '
-  #       required: true
-  #       type: string
   push:
     branches:
       - master 
