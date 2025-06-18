@@ -1,4 +1,4 @@
-FROM python:3.9.6-slim
+FROM python:3.12.11-alpine
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -6,6 +6,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /usr/src/app
 COPY . /usr/src/app
 
+RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 CMD ["python", "-u", "monitor.py"]
