@@ -10,3 +10,18 @@ export const appstoreHost: string = process.env.APPSTORE_HOST
 export const publisherSecret: string = process.env.PUBLISHER_SECRET ?? ""
 if (!process.env.REQUIRE_PUBLISH_SECRET) throw new Error("Environment variable REQUIRE_PUBLISH_SECRET must be set")
 export const requirePublishSecret = process.env.REQUIRE_PUBLISH_SECRET.toLowerCase() === "true"
+
+// Allowlist of Origin header values permitted to open websocket connections.
+// Required to prevent Cross-Site WebSocket Hijacking.
+// Format: comma-separated list of full origins (scheme://host[:port]). Compared
+// case-insensitively. Use "*" only for local development.
+if (!process.env.ALLOWED_WS_ORIGINS) throw new Error("Environment variable ALLOWED_WS_ORIGINS must be set")
+const parsedOrigins: string[] = (process.env.ALLOWED_WS_ORIGINS as string)
+    .split(',')
+    .map((o: string) => o.trim())
+    .filter((o: string) => o.length > 0)
+export const allowAnyWsOrigin: boolean = parsedOrigins.includes("*")
+export const allowedWsOrigins: string[] = parsedOrigins.map((o: string) => o.toLowerCase())
+if (allowAnyWsOrigin) {
+    console.log('--- ALLOWED_WS_ORIGINS contains "*"; websocket origin verification is DISABLED ---')
+}

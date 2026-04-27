@@ -1,11 +1,14 @@
 import { Router } from  'express'
 import expressWs from 'express-ws'
 import { WsReadyEvent } from '../events/ws-ready-event'
-import { appstoreIdentityMiddleware } from '../middleware'
+import { appstoreIdentityMiddleware, wsOriginMiddleware } from '../middleware'
 
 const router = Router()
 expressWs(router as any)
 
+// Origin verification runs before identity lookup so disallowed origins never
+// reach the upstream auth call.
+router.use(wsOriginMiddleware)
 router.use(appstoreIdentityMiddleware)
 
 router.ws('/', (ws, req) => {
