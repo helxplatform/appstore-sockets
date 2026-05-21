@@ -25,3 +25,13 @@ export const allowedWsOrigins: string[] = parsedOrigins.map((o: string) => o.toL
 if (allowAnyWsOrigin) {
     console.log('--- ALLOWED_WS_ORIGINS contains "*"; websocket origin verification is DISABLED ---')
 }
+
+// How often (seconds) each open websocket re-validates its appstore session.
+// Without this, sockets outlive logout/expiry because authentication only happens
+// at handshake. Default 300s (5 min); the staleness window is bounded by this value.
+const rawReauthInterval = process.env.WS_REAUTH_INTERVAL_SECONDS
+const parsedReauthInterval = rawReauthInterval ? parseInt(rawReauthInterval, 10) : 300
+if (Number.isNaN(parsedReauthInterval) || parsedReauthInterval <= 0) {
+    throw new Error("Environment variable WS_REAUTH_INTERVAL_SECONDS must be a positive integer")
+}
+export const wsReauthIntervalMs: number = parsedReauthInterval * 1000
